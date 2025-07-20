@@ -36,44 +36,96 @@ export interface FileInfo {
 class GitHubServiceImpl implements GitHubService {
   async validateRepository(url: string, accessToken?: string): Promise<RepositoryValidation> {
     try {
-      // Extract owner and repo from URL
-      const match = url.match(/github\.com\/([^\/]+)\/([^\/]+)/);
-      if (!match) {
-        return { isValid: false, error: 'Invalid GitHub URL format' };
+      // Clean and normalize the GitHub URL
+      let cleanUrl = url.trim();
+      if (cleanUrl.endsWith('/')) {
+        cleanUrl = cleanUrl.slice(0, -1);
       }
 
-      const [, owner, repo] = match;
-      const repoName = repo.replace('.git', '');
+      // Support multiple GitHub URL formats
+      const patterns = [
+        /github\.com\/([^\/]+)\/([^\/]+?)(?:\.git)?(?:\/.*)?$/,
+        /^https?:\/\/github\.com\/([^\/]+)\/([^\/]+?)(?:\.git)?(?:\/.*)?$/,
+        /^git@github\.com:([^\/]+)\/([^\/]+?)(?:\.git)?$/
+      ];
+
+      let owner: string = '';
+      let repo: string = '';
+
+      for (const pattern of patterns) {
+        const match = cleanUrl.match(pattern);
+        if (match) {
+          [, owner, repo] = match;
+          break;
+        }
+      }
+
+      if (!owner || !repo) {
+        return { isValid: false, error: 'Invalid GitHub URL format. Please use: https://github.com/owner/repository' };
+      }
+
+      // Clean repo name
+      const repoName = repo.replace(/\.git$/, '');
+
+      console.log(`Validating repository: ${owner}/${repoName}`);
 
       // Use GitHub API to validate repository
       const apiUrl = `https://api.github.com/repos/${owner}/${repoName}`;
-      const headers: Record<string, string> = {};
+      const headers: Record<string, string> = {
+        'User-Agent': 'CodeConverter-Pro/1.0',
+        'Accept': 'application/vnd.github.v3+json'
+      };
       
       if (accessToken) {
-        headers['Authorization'] = `token ${accessToken}`;
+        // Support both token formats
+        if (accessToken.startsWith('ghp_') || accessToken.startsWith('github_pat_')) {
+          headers['Authorization'] = `Bearer ${accessToken}`;
+        } else {
+          headers['Authorization'] = `token ${accessToken}`;
+        }
       }
 
+      console.log(`Making request to: ${apiUrl}`);
       const response = await fetch(apiUrl, { headers });
       
+      console.log(`GitHub API response status: ${response.status}`);
+
       if (!response.ok) {
         if (response.status === 404) {
-          return { isValid: false, error: 'Repository not found or access denied' };
+          return { 
+            isValid: false, 
+            error: accessToken 
+              ? 'Repository not found or access denied. Check the URL and token permissions.'
+              : 'Repository not found. For private repositories, please provide an access token.'
+          };
         }
-        return { isValid: false, error: `GitHub API error: ${response.statusText}` };
+        if (response.status === 401) {
+          return { isValid: false, error: 'Invalid access token. Please check your GitHub personal access token.' };
+        }
+        if (response.status === 403) {
+          return { isValid: false, error: 'Access forbidden. Your token may not have the required permissions.' };
+        }
+        
+        const errorText = await response.text();
+        console.error(`GitHub API error: ${response.status} - ${errorText}`);
+        return { isValid: false, error: `GitHub API error (${response.status}): ${response.statusText}` };
       }
 
       const repoData = await response.json();
       
+      console.log(`Repository validated successfully: ${repoData.full_name}`);
+      
       return {
         isValid: true,
         name: repoData.full_name,
-        description: repoData.description,
+        description: repoData.description || 'No description provided',
         lastUpdated: new Date(repoData.updated_at).toLocaleDateString(),
       };
     } catch (error) {
+      console.error('Repository validation error:', error);
       return { 
         isValid: false, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+        error: error instanceof Error ? error.message : 'Network error: Unable to connect to GitHub API' 
       };
     }
   }
