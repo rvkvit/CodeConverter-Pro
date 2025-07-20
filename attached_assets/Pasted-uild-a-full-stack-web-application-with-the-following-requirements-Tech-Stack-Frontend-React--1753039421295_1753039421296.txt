@@ -1,0 +1,99 @@
+uild a full-stack web application with the following requirements:
+
+🔧 Tech Stack:
+Frontend: React (with Tailwind CSS)
+
+Backend: FastAPI (Python)
+
+AI Model: Azure OpenAI (GPT-4o via API key from user input)
+
+CI Tooling: Use GitPython for cloning/pushing repos, and optional support for GitHub OAuth/token-based access
+
+🎯 Application Goal:
+A user-friendly portal where users can:
+
+Connect to their GitHub repository
+
+Allow user to input a GitHub repository URL (public or private with token)
+
+Clone the repo server-side using GitPython
+
+Configure the Tech Stack of the Existing Codebase
+
+Present dropdowns or inputs for:
+
+Code Language (Java, Python, etc.)
+
+Test Framework (TestNG, JUnit, etc.)
+
+Automation Tool (Selenium WebDriver, Cypress, etc.)
+
+Choose Target Framework for Conversion
+
+Allow selection like:
+
+Target language: Robot Framework
+
+Target Library: Browser Library (Playwright-based)
+
+Analyze and Understand the Existing Codebase
+
+Backend should:
+
+Parse and analyze the source repo
+
+Use Azure OpenAI GPT-4o with user-provided API key to:
+
+Understand existing code logic
+
+Build an internal mapping/model
+
+Convert to Target Framework Automatically
+
+Use the internal ML model to:
+
+Translate code from original format (e.g., Java + Selenium + TestNG) to Robot Framework format using Browser Library (Playwright)
+
+Generate .robot files and resource libraries
+
+Allow the User to Review and Push Converted Code
+
+Provide a frontend preview/download of converted code
+
+Ask user for target GitHub repo + access token
+
+Push converted code to specified repository
+
+⚙️ Functional Requirements:
+React UI with:
+
+GitHub repo input
+
+Dropdown for existing stack
+
+Dropdown for target stack
+
+Azure OpenAI API key input
+
+Confirm & Convert button
+
+Backend (FastAPI):
+
+Repo clone using GitPython
+
+Directory tree analysis
+
+Integration with Azure OpenAI to:
+
+Understand code (use model prompt chaining if needed)
+
+Convert to Robot Framework with Browser Library
+
+Save converted code in a new directory
+
+Support pushing to GitHub
+
+📦 Deployment & Storage:
+Use temporary storage (e.g., /tmp/) for cloned and converted repos
+
+Consider SQLite/JSON to cache user sessions and conversion history if needed
